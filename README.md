@@ -10,7 +10,7 @@ Curso: Programación Web II - ISIL
 ## Integrantes: 
 - Beltrán Gálvez, Marco Renato
 - Rodriguez Calderon, Sayuri Kaory
-- 
+- Lévano Cuba, Juan Sebastián
 
 ### Míralo en Acción:
 [Code SandBox!](https://githubbox.com/otanerocram/pw2_ep02)
