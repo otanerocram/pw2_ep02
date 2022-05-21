@@ -9,7 +9,7 @@ Curso: Programación Web II - ISIL
 
 ## Integrantes: 
 - Beltrán Gálvez, Marco Renato
-- 
+- Rodriguez Calderon, Sayuri Kaory
 - 
 
 ### Míralo en Acción:
