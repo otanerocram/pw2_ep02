@@ -1,68 +1,232 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Container, Row, Col, Card, Form, Button, ButtonGroup, Table } from "react-bootstrap";
-import NumberFormat from "react-number-format";
+// import { onlyNumber } from "./Utils/Utils";
 import vehiculo from "./assets/vehiculo.png";
-import Swal from "sweetalert2";
+import ErrorMessage from "./Components/ErrorMessage";
+import MyInputForm from "./Components/MyInputForm";
 import "./App.css";
+import { calculaCuota, calculaInteres, toTEM } from "./Utils/Utils";
 
 function App() {
+    const formRef = useRef(null);
+
+    const [tablaPrestamo, setTablaPrestamo] = useState([]);
     const [prestamo, setPrestamo] = useState({
         monto: 0,
         inicial: 0,
         plazo: 0,
+        tea: 0,
+        capital: 0,
         tem: 0,
+        cuota: 0,
+        desgravamen: 0,
+        totalIntereses: 0,
+        totalPagos: 0,
     });
 
-    const [enableCalc, setEnableCalc] = useState(false);
+    const [errMsg, setErrMsg] = useState({
+        active: false,
+        message: "",
+    });
 
-    const evaluaInicial = () => {
+    const [enableCheck, setEnableCheck] = useState({
+        monto: false,
+        inicial: false,
+        plazo: false,
+        tea: false,
+    });
+
+    const checkAndSave = (isError, errormsg, prop, value) => {
+        setErrMsg({
+            active: isError,
+            message: errormsg,
+        });
+        setPrestamo({
+            ...prestamo,
+            [prop]: value,
+        });
+    };
+
+    const evaluaMonto = (monto) => {
+        if (monto === "" || monto === 0) {
+            checkAndSave(true, "El monto debe ser mayor a cero", "monto", monto);
+            return false;
+        }
+
+        checkAndSave(false, "", "monto", monto);
+        return true;
+    };
+
+    const evaluaInicial = (inicial) => {
         const inicialMin = prestamo.monto * 0.2;
         const inicialMax = prestamo.monto * 0.8;
 
-        if (prestamo.inicial < inicialMin) {
-            Swal.fire({
-                icon: "error",
-                title: "Ups...",
-                text: `El monto de la inicial debe ser mayor al 20% del monto del préstamo.`,
-                footer: `Monto Vehiculo: S/ ${prestamo.monto} -> Inicial Mínima (20%): S/ ${inicialMin}`,
-            });
-            setEnableCalc(false);
+        if (!inicial || inicial < inicialMin) {
+            checkAndSave(true, "El monto inicial debe ser mayor al 20% del monto del prestamo", "inicial", inicial);
             return false;
         }
 
-        if (prestamo.inicial > inicialMax) {
-            Swal.fire({
-                icon: "error",
-                title: "Ups...",
-                text: `El monto de la inicial supera al 80% del monto del préstamo, reduzca el monto de la inicial.`,
-                footer: `Monto Vehiculo: S/ ${prestamo.monto} -> Inicial Máxima (80%): S/ ${inicialMax}`,
-            });
-            setEnableCalc(false);
+        if (inicial > inicialMax) {
+            checkAndSave(true, "El monto inicial debe ser menor al 80% del monto del prestamo", "inicial", inicial);
             return false;
         }
 
+        checkAndSave(false, "", "inicial", inicial);
+        return true;
+    };
+
+    const evaluaPlazo = (plazo) => {
+        if (!plazo || plazo < 6) {
+            checkAndSave(true, "El plazo no puede ser menor a 6 meses.", "plazo", plazo);
+            return false;
+        }
+
+        if (plazo > 48) {
+            checkAndSave(true, "El plazo no puede ser mayor a 48 meses.", "plazo", plazo);
+            return false;
+        }
+
+        checkAndSave(false, "", "plazo", plazo);
+        return true;
+    };
+
+    const evaluaTea = (tea) => {
+        if (!tea || tea < 0.1) {
+            checkAndSave(true, "La tasa de interes no puede ser menor a 0.1%.", "tea", tea);
+            return false;
+        }
+
+        if (tea >= 100) {
+            checkAndSave(true, "La tasa de interes no puede ser mayor a 100%.", "tea", tea);
+            return false;
+        }
+
+        checkAndSave(false, "", "tea", tea);
         return true;
     };
 
     const handleCalcular = (event) => {
         event.preventDefault();
 
-        console.log("Calculando...");
-        console.log(prestamo);
+        const montoCapital = parseFloat(prestamo.monto) - parseFloat(prestamo.inicial);
+        console.log("Monto prestamo: ", montoCapital);
 
-        setEnableCalc(true);
+        const TEM = toTEM(prestamo.tea);
+
+        const cuota = calculaCuota(montoCapital, TEM, prestamo.plazo);
+
+        let html = [];
+        let saldoCapital = montoCapital;
+        let amortizacion = 0;
+        let seguro = 0;
+        let pago = 0;
+
+        let totalInteres = [];
+        let totalPagos = prestamo.plazo * cuota;
+
+        for (let index = 0; index < prestamo.plazo; index++) {
+            console.log("saldoCapital: ", saldoCapital);
+            const interesMes = calculaInteres(saldoCapital, TEM);
+            amortizacion = cuota - interesMes;
+            saldoCapital = saldoCapital - amortizacion;
+
+            totalInteres.push(interesMes);
+
+            seguro = saldoCapital * 0.005;
+            pago = cuota + seguro;
+
+            html.push({
+                numCuota: index + 1,
+                cuota: cuota.toFixed(2),
+                pago: pago.toFixed(2),
+                interes: interesMes.toFixed(2),
+                amort: amortizacion.toFixed(2),
+                capital: saldoCapital.toFixed(2),
+            });
+        }
+
+        setTablaPrestamo(html);
+
+        let sumaIntereses = 0;
+
+        for (const element of totalInteres) {
+            sumaIntereses += element;
+        }
+
+        setPrestamo({
+            ...prestamo,
+            capital: montoCapital,
+            tem: parseFloat(TEM),
+            cuota: cuota.toFixed(2),
+            totalIntereses: sumaIntereses.toFixed(2),
+            totalPagos: totalPagos.toFixed(2),
+        });
     };
 
     const handleChange = (property, values) => {
-        setPrestamo((prevState) => ({
-            ...prevState,
-            [property]: values.floatValue,
-        }));
+        switch (property) {
+            case "monto":
+                setEnableCheck({
+                    ...enableCheck,
+                    monto: evaluaMonto(values.floatValue),
+                });
+                break;
+            case "inicial":
+                setEnableCheck({
+                    ...enableCheck,
+                    inicial: evaluaInicial(values.floatValue),
+                });
+                break;
+            case "plazo":
+                setEnableCheck({
+                    ...enableCheck,
+                    plazo: evaluaPlazo(values.floatValue),
+                });
+                break;
+            case "tea":
+                setEnableCheck({
+                    ...enableCheck,
+                    tea: evaluaTea(values.floatValue),
+                });
+                break;
+            default:
+                break;
+        }
+    };
+
+    const handleReset = () => {
+        formRef.current.reset();
+        setPrestamo({
+            monto: 0,
+            inicial: 0,
+            plazo: 0,
+            tea: 0,
+            capital: 0,
+            tem: 0,
+            cuota: 0,
+            desgravamen: 0,
+            totalIntereses: 0,
+            totalPagos: 0,
+        });
+        setEnableCheck({
+            monto: false,
+            inicial: false,
+            plazo: false,
+            tea: false,
+        });
+        setErrMsg({
+            active: false,
+            message: "",
+        });
     };
 
     useEffect(() => {
         console.log("prestamo", prestamo);
     }, [prestamo]);
+
+    useEffect(() => {
+        console.log("enableCheck", enableCheck);
+    }, [enableCheck]);
 
     return (
         <div className="App">
@@ -81,116 +245,127 @@ function App() {
                                 <img src={vehiculo} alt="credito vehicular" className="m-4" />
                                 <Row>
                                     <Col>
-                                        <Form onSubmit={handleCalcular}>
-                                            <Form.Group as={Row} className="mb-3" controlId="monto">
-                                                <Form.Label className="text-end" column sm="6">
-                                                    Monto Vehiculo
-                                                </Form.Label>
-                                                <Col sm="6">
-                                                    <NumberFormat
-                                                        className="form-control"
-                                                        thousandSeparator={true}
-                                                        prefix="S/ "
-                                                        onValueChange={(values) => {
-                                                            handleChange("monto", values);
-                                                        }}
-                                                        decimalSeparator="."
-                                                        displayType="input"
-                                                        allowNegative={false}
-                                                        decimalScale={2}
-                                                        fixedDecimalScale={true}
-                                                    />
-                                                </Col>
-                                            </Form.Group>
-                                            <Form.Group as={Row} className="mb-3" controlId="inicial">
-                                                <Form.Label className="text-end" column sm="6">
-                                                    Inicial
-                                                </Form.Label>
-                                                <Col sm="6">
-                                                    <NumberFormat
-                                                        className="form-control"
-                                                        thousandSeparator={true}
-                                                        prefix="S/ "
-                                                        onValueChange={(values) => {
-                                                            handleChange("inicial", values);
-                                                        }}
-                                                        decimalSeparator="."
-                                                        displayType="input"
-                                                        allowNegative={false}
-                                                        decimalScale={2}
-                                                        fixedDecimalScale={true}
-                                                        disabled={!prestamo.monto}
-                                                    />
-                                                </Col>
-                                            </Form.Group>
-                                            <Form.Group as={Row} className="mb-3" controlId="plazo">
-                                                <Form.Label className="text-end" column sm="6">
-                                                    Plazo en meses
-                                                </Form.Label>
-                                                <Col sm="6">
-                                                    <NumberFormat
-                                                        className="form-control"
-                                                        onValueChange={(values) => {
-                                                            handleChange("plazo", values);
-                                                        }}
-                                                    />
-                                                </Col>
-                                            </Form.Group>
-                                            <Form.Group as={Row} className="mb-3" controlId="tem">
-                                                <Form.Label className="text-end" column sm="6">
-                                                    Tasa de Interes Anual
-                                                </Form.Label>
-                                                <Col sm="6">
-                                                    <NumberFormat
-                                                        className="form-control"
-                                                        thousandSeparator={true}
-                                                        prefix="% "
-                                                        onValueChange={(values) => {
-                                                            handleChange("tem", values);
-                                                        }}
-                                                    />
-                                                    <span>error</span>
-                                                </Col>
-                                            </Form.Group>
+                                        <Form onSubmit={handleCalcular} ref={formRef}>
+                                            <MyInputForm
+                                                label="Monto Vehiculo"
+                                                property="monto"
+                                                onChange={handleChange}
+                                                thousandSeparator={true}
+                                                prefix="S/ "
+                                                decimalSeparator="."
+                                                displayType="input"
+                                                decimalScale={2}
+                                                value={prestamo.monto}
+                                            />
+
+                                            <MyInputForm
+                                                label="Inicial"
+                                                property="inicial"
+                                                onChange={handleChange}
+                                                thousandSeparator={true}
+                                                prefix="S/ "
+                                                decimalSeparator="."
+                                                displayType="input"
+                                                decimalScale={2}
+                                                disabled={!prestamo.monto}
+                                                value={prestamo.inicial}
+                                            />
+
+                                            <MyInputForm
+                                                label="Capital"
+                                                thousandSeparator={true}
+                                                prefix="S/ "
+                                                decimalScale={2}
+                                                disabled={true}
+                                                value={prestamo.capital}
+                                            />
+
+                                            <MyInputForm
+                                                label="Plazo en meses"
+                                                property="plazo"
+                                                onChange={handleChange}
+                                                disabled={!prestamo.monto}
+                                                value={prestamo.plazo}
+                                            />
+
+                                            <MyInputForm
+                                                label="Tasa de Interes Anual"
+                                                property="tea"
+                                                onChange={handleChange}
+                                                thousandSeparator={true}
+                                                prefix="% "
+                                                decimalScale={0}
+                                                disabled={!prestamo.monto}
+                                                value={prestamo.tea}
+                                            />
 
                                             <ButtonGroup className="mb-2">
-                                                <Button type="submit" className="pl-4" disabled={!enableCalc}>
+                                                <Button
+                                                    type="submit"
+                                                    className={`pl-4 ${
+                                                        !(
+                                                            enableCheck.inicial &&
+                                                            enableCheck.monto &&
+                                                            enableCheck.plazo &&
+                                                            enableCheck.tea
+                                                        ) && "disabled"
+                                                    }`}
+                                                >
                                                     Calcular
                                                 </Button>
-                                                <Button>Reset</Button>
+                                                <Button type="reset" onClick={handleReset} variant="danger">
+                                                    Reset
+                                                </Button>
                                             </ButtonGroup>
                                         </Form>
                                     </Col>
                                     <Col>
                                         <Form>
-                                            <Form.Group as={Row} className="mb-3" controlId="formPlaintextEmail">
-                                                <Form.Label className="text-end" column sm="3">
-                                                    Pago Mensual
-                                                </Form.Label>
-                                                <Col sm="9">
-                                                    <Form.Control readOnly type="number" defaultValue="" />
+                                            <MyInputForm
+                                                label="Tasa Efectiva Mensual"
+                                                thousandSeparator={true}
+                                                prefix="%. "
+                                                decimalScale={2}
+                                                disabled={true}
+                                                value={prestamo.tem}
+                                            />
+
+                                            <MyInputForm
+                                                label="Pago Mensual"
+                                                thousandSeparator={true}
+                                                prefix="S/ "
+                                                decimalScale={2}
+                                                disabled={true}
+                                                value={prestamo.cuota}
+                                            />
+
+                                            <MyInputForm
+                                                label="Total Intereses"
+                                                thousandSeparator={true}
+                                                prefix="S/ "
+                                                decimalScale={2}
+                                                disabled={true}
+                                                value={prestamo.totalIntereses}
+                                            />
+
+                                            <MyInputForm
+                                                label="Total Pagos"
+                                                thousandSeparator={true}
+                                                prefix="S/ "
+                                                decimalScale={2}
+                                                disabled={true}
+                                                value={prestamo.totalPagos}
+                                            />
+                                            <Row>
+                                                <Col>
+                                                    {errMsg.active && (
+                                                        <ErrorMessage
+                                                            className="fs-6 text-danger text-end m-2"
+                                                            message={errMsg.message}
+                                                        />
+                                                    )}
                                                 </Col>
-                                            </Form.Group>
-                                            <Form.Group as={Row} className="mb-3" controlId="formPlaintextEmail">
-                                                <Form.Label className="text-end" column sm="3">
-                                                    Total Interes
-                                                </Form.Label>
-                                                <Col sm="9">
-                                                    <Form.Control readOnly type="number" defaultValue="" />
-                                                </Col>
-                                            </Form.Group>
-                                            <Form.Group as={Row} className="mb-3" controlId="formPlaintextEmail">
-                                                <Form.Label className="text-end" column sm="3">
-                                                    Total Pagos
-                                                </Form.Label>
-                                                <Col sm="9">
-                                                    <Form.Control
-                                                        readOnly
-                                                        type="number"
-                                                        defaultValue="email@example.com"
-                                                    />
-                                                </Col>
-                                            </Form.Group>
+                                            </Row>
                                         </Form>
                                     </Col>
                                 </Row>
@@ -198,35 +373,27 @@ function App() {
                                 <Table striped bordered hover size="sm">
                                     <thead>
                                         <tr>
-                                            <th>PARC</th>
-                                            <th>Amort</th>
+                                            <th>Numero</th>
+                                            <th>Cuota Mensual</th>
+                                            <th>Cuota + Seguro</th>
                                             <th>Interes</th>
-                                            <th>Pago</th>
-                                            <th>Saldo</th>
+                                            <th>Amort</th>
+                                            <th>Saldo Capital</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr>
-                                            <td>1</td>
-                                            <td>Mark</td>
-                                            <td>Otto</td>
-                                            <td>@mdo</td>
-                                            <td>@mdo</td>
-                                        </tr>
-                                        <tr>
-                                            <td>2</td>
-                                            <td>Jacob</td>
-                                            <td>Thornton</td>
-                                            <td>@fat</td>
-                                            <td>@mdo</td>
-                                        </tr>
-                                        <tr>
-                                            <td>3</td>
-                                            <td>Larry the Bird</td>
-                                            <td>@fat</td>
-                                            <td>@twitter</td>
-                                            <td>@mdo</td>
-                                        </tr>
+                                        {tablaPrestamo.map((el, idx) => {
+                                            return (
+                                                <tr key={el.idx}>
+                                                    <td>{el.numCuota}</td>
+                                                    <td>{el.cuota}</td>
+                                                    <td>{el.pago}</td>
+                                                    <td>{el.interes}</td>
+                                                    <td>{el.amort}</td>
+                                                    <td>{el.capital}</td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </Table>
                             </Card.Body>
