@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { Container, Row, Col, Card, Form, Button, ButtonGroup, Table } from "react-bootstrap";
-import { calculaCuota, calculaInteres, toTEM } from "./Utils/Utils";
+import { calculaCuota, calculaInteres, commify, toTEM } from "./Utils/Utils";
 import vehiculo from "./assets/vehiculo.png";
 import ErrorMessage from "./Components/ErrorMessage";
 import MyInputForm from "./Components/MyInputForm";
@@ -351,9 +351,9 @@ function App() {
                                 <Table striped bordered hover size="sm">
                                     <thead>
                                         <tr>
-                                            <th className="text-end">Numero</th>
-                                            <th className="text-end">Amortizacion</th>
-                                            <th className="text-end">Interes</th>
+                                            <th className="text-end">Número</th>
+                                            <th className="text-end">Amortización</th>
+                                            <th className="text-end">Interés</th>
                                             <th className="text-end">Cuota Mensual</th>
                                             <th className="text-end">Desgravamen</th>
                                             <th className="text-end">Monto a Pagar</th>
@@ -364,12 +364,12 @@ function App() {
                                         {prestamo.tablaPrestamo.map((el, idx) => (
                                             <tr key={idx}>
                                                 <td className="text-end">{el.numCuota}</td>
-                                                <td className="text-end">S/ {el.amort}</td>
-                                                <td className="text-end">S/ {el.interes}</td>
-                                                <td className="text-end">S/ {el.cuota}</td>
-                                                <td className="text-end">S/ {el.desgravamen}</td>
-                                                <td className="text-end">S/ {el.pago}</td>
-                                                <td className="text-end">S/ {el.capital}</td>
+                                                <td className="text-end">S/ {commify(el.amort.toString())}</td>
+                                                <td className="text-end">S/ {commify(el.interes.toString())}</td>
+                                                <td className="text-end">S/ {commify(el.cuota.toString())}</td>
+                                                <td className="text-end">S/ {commify(el.desgravamen.toString())}</td>
+                                                <td className="text-end">S/ {commify(el.pago.toString())}</td>
+                                                <td className="text-end">S/ {commify(el.capital.toString())}</td>
                                             </tr>
                                         ))}
                                     </tbody>
