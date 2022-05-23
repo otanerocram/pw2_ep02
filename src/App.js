@@ -1,40 +1,42 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { Container, Row, Col, Card, Form, Button, ButtonGroup, Table } from "react-bootstrap";
-// import { onlyNumber } from "./Utils/Utils";
+import { calculaCuota, calculaInteres, toTEM } from "./Utils/Utils";
 import vehiculo from "./assets/vehiculo.png";
 import ErrorMessage from "./Components/ErrorMessage";
 import MyInputForm from "./Components/MyInputForm";
 import "./App.css";
-import { calculaCuota, calculaInteres, toTEM } from "./Utils/Utils";
+
+const initialValues = {
+    monto: 0,
+    inicial: 0,
+    plazo: 0,
+    tea: 0,
+    capital: 0,
+    tem: 0,
+    cuota: 0,
+    desgravamen: 0,
+    totalIntereses: 0,
+    totalPagos: 0,
+    tablaPrestamo: [],
+};
+
+const initialChecks = {
+    monto: false,
+    inicial: false,
+    plazo: false,
+    tea: false,
+};
+
+const defaultMsg = {
+    active: false,
+    message: "",
+};
 
 function App() {
     const formRef = useRef(null);
-
-    const [tablaPrestamo, setTablaPrestamo] = useState([]);
-    const [prestamo, setPrestamo] = useState({
-        monto: 0,
-        inicial: 0,
-        plazo: 0,
-        tea: 0,
-        capital: 0,
-        tem: 0,
-        cuota: 0,
-        desgravamen: 0,
-        totalIntereses: 0,
-        totalPagos: 0,
-    });
-
-    const [errMsg, setErrMsg] = useState({
-        active: false,
-        message: "",
-    });
-
-    const [enableCheck, setEnableCheck] = useState({
-        monto: false,
-        inicial: false,
-        plazo: false,
-        tea: false,
-    });
+    const [prestamo, setPrestamo] = useState(initialValues);
+    const [errMsg, setErrMsg] = useState(defaultMsg);
+    const [enableCheck, setEnableCheck] = useState(initialChecks);
 
     const checkAndSave = (isError, errormsg, prop, value) => {
         setErrMsg({
@@ -120,6 +122,7 @@ function App() {
         let amortizacion = 0;
         let seguro = 0;
         let pago = 0;
+        let sumaIntereses = 0;
 
         let totalInteres = [];
         let totalPagos = prestamo.plazo * cuota;
@@ -128,26 +131,23 @@ function App() {
             console.log("saldoCapital: ", saldoCapital);
             const interesMes = calculaInteres(saldoCapital, TEM);
             amortizacion = cuota - interesMes;
+            seguro = saldoCapital * 0.005;
             saldoCapital = saldoCapital - amortizacion;
 
             totalInteres.push(interesMes);
 
-            seguro = saldoCapital * 0.005;
             pago = cuota + seguro;
 
             html.push({
                 numCuota: index + 1,
                 cuota: cuota.toFixed(2),
+                desgravamen: seguro.toFixed(2),
                 pago: pago.toFixed(2),
                 interes: interesMes.toFixed(2),
                 amort: amortizacion.toFixed(2),
                 capital: saldoCapital.toFixed(2),
             });
         }
-
-        setTablaPrestamo(html);
-
-        let sumaIntereses = 0;
 
         for (const element of totalInteres) {
             sumaIntereses += element;
@@ -160,6 +160,7 @@ function App() {
             cuota: cuota.toFixed(2),
             totalIntereses: sumaIntereses.toFixed(2),
             totalPagos: totalPagos.toFixed(2),
+            tablaPrestamo: html,
         });
     };
 
@@ -196,37 +197,10 @@ function App() {
 
     const handleReset = () => {
         formRef.current.reset();
-        setPrestamo({
-            monto: 0,
-            inicial: 0,
-            plazo: 0,
-            tea: 0,
-            capital: 0,
-            tem: 0,
-            cuota: 0,
-            desgravamen: 0,
-            totalIntereses: 0,
-            totalPagos: 0,
-        });
-        setEnableCheck({
-            monto: false,
-            inicial: false,
-            plazo: false,
-            tea: false,
-        });
-        setErrMsg({
-            active: false,
-            message: "",
-        });
+        setPrestamo(initialValues);
+        setEnableCheck(initialChecks);
+        setErrMsg(defaultMsg);
     };
-
-    useEffect(() => {
-        console.log("prestamo", prestamo);
-    }, [prestamo]);
-
-    useEffect(() => {
-        console.log("enableCheck", enableCheck);
-    }, [enableCheck]);
 
     return (
         <div className="App">
@@ -299,24 +273,28 @@ function App() {
                                                 value={prestamo.tea}
                                             />
 
-                                            <ButtonGroup className="mb-2">
-                                                <Button
-                                                    type="submit"
-                                                    className={`pl-4 ${
-                                                        !(
-                                                            enableCheck.inicial &&
-                                                            enableCheck.monto &&
-                                                            enableCheck.plazo &&
-                                                            enableCheck.tea
-                                                        ) && "disabled"
-                                                    }`}
-                                                >
-                                                    Calcular
-                                                </Button>
-                                                <Button type="reset" onClick={handleReset} variant="danger">
-                                                    Reset
-                                                </Button>
-                                            </ButtonGroup>
+                                            <Row className="my-3">
+                                                <Col className="text-end">
+                                                    <ButtonGroup className="mb-2">
+                                                        <Button
+                                                            type="submit"
+                                                            className={`pl-4 ${
+                                                                !(
+                                                                    enableCheck.inicial &&
+                                                                    enableCheck.monto &&
+                                                                    enableCheck.plazo &&
+                                                                    enableCheck.tea
+                                                                ) && "disabled"
+                                                            }`}
+                                                        >
+                                                            Calcular
+                                                        </Button>
+                                                        <Button type="reset" onClick={handleReset} variant="danger">
+                                                            Reset
+                                                        </Button>
+                                                    </ButtonGroup>
+                                                </Col>
+                                            </Row>
                                         </Form>
                                     </Col>
                                     <Col>
@@ -373,27 +351,27 @@ function App() {
                                 <Table striped bordered hover size="sm">
                                     <thead>
                                         <tr>
-                                            <th>Numero</th>
-                                            <th>Cuota Mensual</th>
-                                            <th>Cuota + Seguro</th>
-                                            <th>Interes</th>
-                                            <th>Amort</th>
-                                            <th>Saldo Capital</th>
+                                            <th className="text-end">Numero</th>
+                                            <th className="text-end">Amortizacion</th>
+                                            <th className="text-end">Interes</th>
+                                            <th className="text-end">Cuota Mensual</th>
+                                            <th className="text-end">Desgravamen</th>
+                                            <th className="text-end">Monto a Pagar</th>
+                                            <th className="text-end">Saldo Capital</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {tablaPrestamo.map((el, idx) => {
-                                            return (
-                                                <tr key={el.idx}>
-                                                    <td>{el.numCuota}</td>
-                                                    <td>{el.cuota}</td>
-                                                    <td>{el.pago}</td>
-                                                    <td>{el.interes}</td>
-                                                    <td>{el.amort}</td>
-                                                    <td>{el.capital}</td>
-                                                </tr>
-                                            );
-                                        })}
+                                        {prestamo.tablaPrestamo.map((el, idx) => (
+                                            <tr key={idx}>
+                                                <td className="text-end">{el.numCuota}</td>
+                                                <td className="text-end">S/ {el.amort}</td>
+                                                <td className="text-end">S/ {el.interes}</td>
+                                                <td className="text-end">S/ {el.cuota}</td>
+                                                <td className="text-end">S/ {el.desgravamen}</td>
+                                                <td className="text-end">S/ {el.pago}</td>
+                                                <td className="text-end">S/ {el.capital}</td>
+                                            </tr>
+                                        ))}
                                     </tbody>
                                 </Table>
                             </Card.Body>
