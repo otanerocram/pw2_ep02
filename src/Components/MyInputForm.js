@@ -10,7 +10,7 @@ const MyInputForm = (props) => {
             </Form.Label>
             <Col sm="6">
                 <NumberFormat
-                    className="form-control"
+                    className="form-control text-end"
                     onValueChange={(values) => {
                         props.onChange && props.onChange(props.property, values);
                     }}
