@@ -21,15 +21,11 @@ export const toTEM = (tea) => {
 };
 
 export const calculaCuota = (capital, tem, periodo) => {
-    console.log("capital", capital);
     const interes = tem / 100;
-    console.log("interes", interes);
     const base = 1 + interes;
     const potencia = Math.pow(base, periodo);
-
     const base1 = potencia * interes;
     const base2 = potencia - 1;
-
     const cuota = capital * (base1 / base2);
 
     console.log(`Calculando cuota: ${cuota.toFixed(2)}`);
@@ -70,4 +66,4 @@ export const commify = (n) => {
     const thousands = /\B(?=(\d{3})+(?!\d))/g;
 
     return numberPart.replace(thousands, ",") + (decimalPart ? "." + decimalPart : "");
-}
+};

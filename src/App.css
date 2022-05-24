@@ -25,3 +25,12 @@ body {
     background-color: #2961bb !important;
     color: #61dafb;
 }
+
+.banner {
+    background-image: url("./assets/banner_2.png"); /* The image used */
+    background-color: #cccccc; /* Used if the image is unavailable */
+    height: 140px; /* You must set a specified height */
+    background-position: center; /* Center the image */
+    background-repeat: no-repeat; /* Do not repeat the image */
+    background-size: cover; /* Resize the background image to cover the entire container */
+}

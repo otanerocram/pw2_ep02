@@ -1,7 +1,6 @@
 import { useState, useRef } from "react";
-import { Container, Row, Col, Card, Form, Button, ButtonGroup, Table } from "react-bootstrap";
+import { Container, Row, Col, Card, Form, Button, ButtonGroup, Table, OverlayTrigger, Tooltip } from "react-bootstrap";
 import { calculaCuota, calculaInteres, commify, toTEM } from "./Utils/Utils";
-import vehiculo from "./assets/vehiculo.png";
 import ErrorMessage from "./Components/ErrorMessage";
 import MyInputForm from "./Components/MyInputForm";
 import "./App.css";
@@ -209,14 +208,8 @@ function App() {
                     <Col>
                         <Card>
                             <Card.Body>
-                                <Card.Title>Calculadora de Prestamo Vehicular</Card.Title>
-                                <Card.Subtitle className="mb-2 text-muted">Amortizacion Sistema Frances</Card.Subtitle>
-                                <Card.Text>
-                                    Some quick example text to build on the card title and make up the bulk of the
-                                    card's content.
-                                </Card.Text>
+                                <div className="banner mb-4"></div>
 
-                                <img src={vehiculo} alt="credito vehicular" className="m-4" />
                                 <Row>
                                     <Col>
                                         <Form onSubmit={handleCalcular} ref={formRef}>
@@ -246,15 +239,6 @@ function App() {
                                             />
 
                                             <MyInputForm
-                                                label="Capital"
-                                                thousandSeparator={true}
-                                                prefix="S/ "
-                                                decimalScale={2}
-                                                disabled={true}
-                                                value={prestamo.capital}
-                                            />
-
-                                            <MyInputForm
                                                 label="Plazo en meses"
                                                 property="plazo"
                                                 onChange={handleChange}
@@ -268,10 +252,20 @@ function App() {
                                                 onChange={handleChange}
                                                 thousandSeparator={true}
                                                 prefix="% "
-                                                decimalScale={0}
+                                                decimalScale={2}
                                                 disabled={!prestamo.monto}
                                                 value={prestamo.tea}
                                             />
+                                            <Row>
+                                                <Col>
+                                                    {errMsg.active && (
+                                                        <ErrorMessage
+                                                            className="fs-6 text-danger text-end m-2"
+                                                            message={errMsg.message}
+                                                        />
+                                                    )}
+                                                </Col>
+                                            </Row>
 
                                             <Row className="my-3">
                                                 <Col className="text-end">
@@ -300,10 +294,18 @@ function App() {
                                     <Col>
                                         <Form>
                                             <MyInputForm
+                                                label="Capital"
+                                                thousandSeparator={true}
+                                                prefix="S/ "
+                                                decimalScale={2}
+                                                disabled={true}
+                                                value={prestamo.capital}
+                                            />
+                                            <MyInputForm
                                                 label="Tasa Efectiva Mensual"
                                                 thousandSeparator={true}
                                                 prefix="%. "
-                                                decimalScale={2}
+                                                decimalScale={4}
                                                 disabled={true}
                                                 value={prestamo.tem}
                                             />
@@ -334,46 +336,47 @@ function App() {
                                                 disabled={true}
                                                 value={prestamo.totalPagos}
                                             />
-                                            <Row>
-                                                <Col>
-                                                    {errMsg.active && (
-                                                        <ErrorMessage
-                                                            className="fs-6 text-danger text-end m-2"
-                                                            message={errMsg.message}
-                                                        />
-                                                    )}
-                                                </Col>
-                                            </Row>
                                         </Form>
                                     </Col>
                                 </Row>
 
-                                <Table striped bordered hover size="sm">
-                                    <thead>
-                                        <tr>
-                                            <th className="text-end">Número</th>
-                                            <th className="text-end">Amortización</th>
-                                            <th className="text-end">Interés</th>
-                                            <th className="text-end">Cuota Mensual</th>
-                                            <th className="text-end">Desgravamen</th>
-                                            <th className="text-end">Monto a Pagar</th>
-                                            <th className="text-end">Saldo Capital</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {prestamo.tablaPrestamo.map((el, idx) => (
-                                            <tr key={idx}>
-                                                <td className="text-end">{el.numCuota}</td>
-                                                <td className="text-end">S/ {commify(el.amort.toString())}</td>
-                                                <td className="text-end">S/ {commify(el.interes.toString())}</td>
-                                                <td className="text-end">S/ {commify(el.cuota.toString())}</td>
-                                                <td className="text-end">S/ {commify(el.desgravamen.toString())}</td>
-                                                <td className="text-end">S/ {commify(el.pago.toString())}</td>
-                                                <td className="text-end">S/ {commify(el.capital.toString())}</td>
+                                {prestamo.tablaPrestamo.length > 0 && (
+                                    <Table striped bordered hover size="sm">
+                                        <thead>
+                                            <tr>
+                                                <th className="text-end">Número</th>
+                                                <th className="text-end">Amortización</th>
+                                                <th className="text-end">Interés</th>
+                                                <th className="text-end">Cuota Mensual</th>
+                                                <OverlayTrigger
+                                                    key={`top`}
+                                                    placement={`top`}
+                                                    overlay={<Tooltip id={`tooltip-top`}>Desgravamen 0.5%</Tooltip>}
+                                                >
+                                                    <th className="text-end">Desgravamen</th>
+                                                </OverlayTrigger>
+
+                                                <th className="text-end">Monto a Pagar</th>
+                                                <th className="text-end">Saldo Capital</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </Table>
+                                        </thead>
+                                        <tbody>
+                                            {prestamo.tablaPrestamo.map((el, idx) => (
+                                                <tr key={idx}>
+                                                    <td className="text-end">{el.numCuota}</td>
+                                                    <td className="text-end">S/ {commify(el.amort.toString())}</td>
+                                                    <td className="text-end">S/ {commify(el.interes.toString())}</td>
+                                                    <td className="text-end">S/ {commify(el.cuota.toString())}</td>
+                                                    <td className="text-end">
+                                                        S/ {commify(el.desgravamen.toString())}
+                                                    </td>
+                                                    <td className="text-end">S/ {commify(el.pago.toString())}</td>
+                                                    <td className="text-end">S/ {commify(el.capital.toString())}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </Table>
+                                )}
                             </Card.Body>
                         </Card>
                     </Col>
