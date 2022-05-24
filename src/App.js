@@ -212,8 +212,8 @@ function App() {
                                 <Card.Title>Calculadora de Prestamo Vehicular</Card.Title>
                                 <Card.Subtitle className="mb-2 text-muted">Amortizacion Sistema Frances</Card.Subtitle>
                                 <Card.Text>
-                                    Some quick example text to build on the card title and make up the bulk of the
-                                    card's content.
+                                   La amortización por el sistema francés, se caracteriza por cuotas iguales, valores de amortización
+                                   del principal e interés crecientes.
                                 </Card.Text>
 
                                 <img src={vehiculo} alt="credito vehicular" className="m-4" />
